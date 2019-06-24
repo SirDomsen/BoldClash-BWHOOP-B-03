@@ -29,7 +29,7 @@
 
 // Enable this for 3D. The 'Motor Direction' setting in BLHeliSuite must
 // be set to 'Bidirectional' (or 'Bidirectional Rev.') accordingly:
-//#define BIDIRECTIONAL
+#define BIDIRECTIONAL
 
 // Select Dshot150 or Dshot300. Dshot150 consumes quite some main loop time.
 // DShot300 may require removing the input filter cap on the ESC:
@@ -58,7 +58,7 @@
 
 // IDLE_OFFSET is added to the throttle. Adjust its value so that the motors
 // still spin at minimum throttle.
-#define IDLE_OFFSET 40
+#define IDLE_OFFSET 30 // 4S
 
 // READ THIS:
 
@@ -401,6 +401,7 @@ void dshot_dma_start()
 	dshot_dma_portA();
 }
 
+int idle_offset = IDLE_OFFSET; // gets corrected by battery_scale_factor in main.c
 void pwm_set( uint8_t number, float pwm )
 {
     // if ( number > 3 ) failloop(5);
@@ -419,16 +420,16 @@ void pwm_set( uint8_t number, float pwm )
 
 	if ( pwmdir == FORWARD ) {
 		// maps 0.0 .. 0.999 to 48 + IDLE_OFFSET .. 1047
-		value = 48 + IDLE_OFFSET + (uint16_t)( pwm * ( 1000 - IDLE_OFFSET ) );
+		value = 48 + idle_offset + (uint16_t)( pwm * ( 1000 - idle_offset ) );
 	} else if ( pwmdir == REVERSE ) {
 		// maps 0.0 .. 0.999 to 1048 + IDLE_OFFSET .. 2047
-		value = 1048 + IDLE_OFFSET + (uint16_t)( pwm * ( 1000 - IDLE_OFFSET ) );
+		value = 1048 + idle_offset + (uint16_t)( pwm * ( 1000 - idle_offset ) );
 	}
 
 #else
 
 	// maps 0.0 .. 0.999 to 48 + IDLE_OFFSET * 2 .. 2047
-	value = 48 + IDLE_OFFSET * 2 + (uint16_t)( pwm * ( 2001 - IDLE_OFFSET * 2 ) );
+	value = 48 + idle_offset * 2 + (uint16_t)( pwm * ( 2001 - idle_offset * 2 ) );
 
 #endif
 
@@ -473,14 +474,15 @@ void pwm_set( uint8_t number, float pwm )
 #define DSHOT_CMD_BEEP5 5 // 5 currently uses the same tone as 4 in BLHeli_S.
 
 #ifndef MOTOR_BEEPS_TIMEOUT
-#define MOTOR_BEEPS_TIMEOUT 1e6
+#define MOTOR_BEEPS_TIMEOUT 0e6
 #endif
 
 void motorbeep()
 {
 	static unsigned long motor_beep_time = 0;
-	if ( failsafe ) {
-		unsigned long time = gettime();
+	unsigned long time = gettime();
+	extern char aux[];
+	if ( failsafe && time > 60e6 || aux[DEVO_CHAN_12] ) {
 		if ( motor_beep_time == 0 ) {
 			motor_beep_time = time;
 		}
@@ -498,10 +500,10 @@ void motorbeep()
 			}
 
 			if ( beep_command != 0 ) {
-				make_packet( 0, beep_command, false );
-				make_packet( 1, beep_command, false );
-				make_packet( 2, beep_command, false );
-				make_packet( 3, beep_command, false );
+				make_packet( 0, beep_command, true );
+				make_packet( 1, beep_command, true );
+				make_packet( 2, beep_command, true );
+				make_packet( 3, beep_command, true );
 				dshot_dma_start();
 			}
 		}

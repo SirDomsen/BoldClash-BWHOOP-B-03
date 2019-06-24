@@ -40,9 +40,9 @@ const uint8_t command1[GSIZE] = {
 	GESTURE_CENTER_IDLE, GESTURE_LEFT, GESTURE_CENTER, GESTURE_LEFT, GESTURE_CENTER, GESTURE_DOWN, GESTURE_CENTER
 };
 
-// R R D
+// L L U
 const uint8_t command2[GSIZE] = {
-	GESTURE_CENTER_IDLE, GESTURE_RIGHT, GESTURE_CENTER, GESTURE_RIGHT, GESTURE_CENTER, GESTURE_DOWN, GESTURE_CENTER
+	GESTURE_CENTER_IDLE, GESTURE_LEFT, GESTURE_CENTER, GESTURE_LEFT, GESTURE_CENTER, GESTURE_UP, GESTURE_CENTER
 };
 
 // D D D
@@ -57,12 +57,12 @@ const uint8_t command8[GSIZE] = {
 };
 
 #ifdef PID_GESTURE_TUNING
-// U D U - Next PID term
+// U D U - Next PID axis
 const uint8_t command4[GSIZE] = {
 	GESTURE_CENTER_IDLE, GESTURE_UP, GESTURE_CENTER, GESTURE_DOWN, GESTURE_CENTER, GESTURE_UP, GESTURE_CENTER
 };
 
-// U D D - Next PID Axis
+// U D D - Next PID term
 const uint8_t command5[GSIZE] = {
 	GESTURE_CENTER_IDLE, GESTURE_UP, GESTURE_CENTER, GESTURE_DOWN, GESTURE_CENTER, GESTURE_DOWN, GESTURE_CENTER
 };
@@ -115,7 +115,7 @@ int gestures2()
 		    }
 		  else
 		    {
-			    //      gesture_start = GESTURE_OTHER;  
+			    //      gesture_start = GESTURE_OTHER;
 		    }
 
 		  unsigned long time = gettime();
@@ -171,8 +171,8 @@ uint8_t check_command( uint8_t  buffer1[] , const uint8_t  command[]  )
             {
                 if( buffer1[i] != command[GSIZE - i - 1])
                 return 0;
-            }     
-return 1;            
+            }
+return 1;
 }
 
 int gesture_sequence(int currentgesture)
@@ -200,17 +200,17 @@ int gesture_sequence(int currentgesture)
 			    return GESTURE_LLD;
 		    }
 
-		
+
 		  if (check_command ( &gbuffer[0] , &command2[0] ))
 		    {
 			    // command 2
 
 			    //change buffer so it does not trigger again
 			    gbuffer[1] = GESTURE_OTHER;
-			    return GESTURE_RRD;
+			    return GESTURE_LLU;
 		    }
 
-		
+
 		  if (check_command ( &gbuffer[0] , &command3[0] ))
 		    {
 			    // command 3
@@ -227,7 +227,7 @@ int gesture_sequence(int currentgesture)
 			    gbuffer[1] = GESTURE_OTHER;
 			    return GESTURE_UUU;
 		    }
-            
+
 			#ifdef PID_GESTURE_TUNING
 			if (check_command ( &gbuffer[0] , &command4[0] ))
 		    {
@@ -237,7 +237,7 @@ int gesture_sequence(int currentgesture)
 			    gbuffer[1] = GESTURE_OTHER;
 			    return GESTURE_UDU;
 		    }
-				
+
 			if (check_command ( &gbuffer[0] , &command5[0] ))
 		    {
 			    // command 5
@@ -246,7 +246,7 @@ int gesture_sequence(int currentgesture)
 			    gbuffer[1] = GESTURE_OTHER;
 			    return GESTURE_UDD;
 		    }
-				
+
 			if (check_command ( &gbuffer[0] , &command6[0] ))
 		    {
 			    // command 6

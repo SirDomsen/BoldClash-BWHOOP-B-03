@@ -12,8 +12,8 @@
 // acro pids are also used at the same time in level mode
 
 // yaw is done by the rate yaw pid
-// Kp                       ROLL + PITCH  
-float apidkp[APIDNUMBER] = { 7.00 };
+// Kp                       ROLL + PITCH
+float apidkp[APIDNUMBER] = { 20 };
 
 // Kd
 float apidkd[APIDNUMBER] = { 0.0 };
@@ -44,8 +44,8 @@ float apid(int x)
 
 
 extern float timefactor;
-      
-    apidoutput[x] = apidoutput[x] + (angleerror[x] - lasterror[x]) * apidkd[0] * timefactor;
+
+    apidoutput[x] = apidoutput[x] - (angleerror[x] - lasterror[x]) * apidkd[0] * timefactor;
     lasterror[x] = angleerror[x];
 
 	limitf(&apidoutput[x], OUTLIMIT_FLOAT);

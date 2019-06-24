@@ -5,16 +5,16 @@ void gestures( void);
 
 // warning: using if x>GESTURE_UDR to check if pid gestures used
 enum gestures_enum{
-    GESTURE_NONE = 0, 
+    GESTURE_NONE = 0,
     GESTURE_DDD,
     GESTURE_UUU,
     GESTURE_LLD,
-    GESTURE_RRD,
+    GESTURE_LLU,
     GESTURE_UDU,
     GESTURE_UDD,
     GESTURE_UDR,
     GESTURE_UDL
-    
+
 };
 
 

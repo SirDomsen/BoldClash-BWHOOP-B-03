@@ -21,12 +21,12 @@ void gestures( void)
         {
             if (command == GESTURE_DDD)
 		    {
-			                  
+
                 //skip accel calibration if pid gestures used
                 if ( !pid_gestures_used )
                 {
                     gyro_cal();	// for flashing lights
-                    acc_cal();                   
+                    acc_cal();
                 }
                 else
                 {
@@ -37,7 +37,7 @@ void gestures( void)
                 extern float accelcal[3];
                 flash2_fmc_write( accelcal[0] + 127 , accelcal[1] + 127);
                 #endif
-                
+
                 #ifdef FLASH_SAVE1
 			    extern void flash_save( void);
                 extern void flash_load( void);
@@ -47,24 +47,24 @@ void gestures( void)
                 extern int number_of_increments[3][3];
                 for( int i = 0 ; i < 3 ; i++)
                     for( int j = 0 ; j < 3 ; j++)
-                        number_of_increments[i][j] = 0;  
-                
+                        number_of_increments[i][j] = 0;
+
                 #endif
-			    // reset loop time 
+			    // reset loop time
 			    extern unsigned long lastlooptime;
 			    lastlooptime = gettime();
-		    }		
+		    }
             if (command == GESTURE_UUU)
               {
-                 #if (defined RX_BAYANG_PROTOCOL_TELEMETRY || defined RX_NRF24_BAYANG_TELEMETRY )                 
+                 #if (defined RX_BAYANG_PROTOCOL_TELEMETRY || defined RX_NRF24_BAYANG_TELEMETRY )
                  extern int rx_bind_enable;
                  rx_bind_enable=!rx_bind_enable;
                  ledblink = 2 - rx_bind_enable;
-                 pid_gestures_used = 1;  
+                 pid_gestures_used = 1;
                  #endif
               }
-              
-            if (command == GESTURE_RRD)
+
+            if (command == GESTURE_LLU)
               {
                   aux[CH_AUX1] = 1;
                   ledcommand = 1;
@@ -74,18 +74,18 @@ void gestures( void)
                   ledcommand = 1;
                   aux[CH_AUX1] = 0;
               }
-            #ifdef PID_GESTURE_TUNING              
-            if ( command >= GESTURE_UDR ) pid_gestures_used = 1;   
-              
+            #ifdef PID_GESTURE_TUNING
+            if ( command >= GESTURE_UDR ) pid_gestures_used = 1;
+
             if (command == GESTURE_UDU)
-              {
-                        // Cycle to next pid term (P I D)
-                        ledblink = next_pid_term();
-              }
-            if (command == GESTURE_UDD)
               {
                         // Cycle to next axis (Roll Pitch Yaw)
                         ledblink = next_pid_axis();
+              }
+            if (command == GESTURE_UDD)
+              {
+                        // Cycle to next pid term (P I D)
+                        ledblink = next_pid_term();
               }
             if (command == GESTURE_UDR)
               {
@@ -97,17 +97,17 @@ void gestures( void)
                         // Descrease by 10%
                   ledblink = decrease_pid();
               }
-            // flash long on zero  
-            if ( pid_gestures_used && ledblink == 0) ledcommand = 1; 
-              
-                // U D U - Next PID term
-                // U D D - Next PID Axis
+            // flash long on zero
+            if ( pid_gestures_used && ledblink == 0) ledcommand = 1;
+
+                // U D U - Next PID axis
+                // U D D - Next PID term
                 // U D R - Increase value
                 // U D L - Descrease value
                // ledblink = blink; //Will cause led logic to blink the number of times ledblink has stored in it.
                 #endif
 
 	  }
-		#endif		
+		#endif
  }
 

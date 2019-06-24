@@ -14,7 +14,7 @@ extern char aux[];
 // this is the output of this function
 float errorvect[3];
 // cache the last result so it does not get calculated everytime
-float last_rx[2] = {13.13f , 12.12f};
+// float last_rx[2] = {13.13f , 12.12f};
 float stickvector[3] = { 0 , 0 , 1};
 
 
@@ -23,16 +23,15 @@ float stickvector[3] = { 0 , 0 , 1};
 void stick_vector( float rx_input[] , float maxangle)
 {
 // only compute stick rotation if values changed
-if ( last_rx[0] == rx_input[0] && last_rx[1] == rx_input[1] )
-{
-     
-}
-else
-{
-    last_rx[0] = rx_input[0];
-    last_rx[1] = rx_input[1]; 
-	
-	
+// if ( last_rx[0] == rx_input[0] && last_rx[1] == rx_input[1] )
+// {
+// }
+// else
+// {
+//     last_rx[0] = rx_input[0];
+//     last_rx[1] = rx_input[1];
+
+
 float pitch, roll;
 
 	// rotate down vector to match stick position
@@ -43,10 +42,10 @@ stickvector[0] = fastsin( roll );
 stickvector[1] = fastsin( pitch );
 stickvector[2] = fastcos( roll ) * fastcos( pitch );
 
-		
+
 float	mag2 = (stickvector[0] * stickvector[0] + stickvector[1] * stickvector[1]);
 
-if ( mag2 > 0.001f ) 
+if ( mag2 > 0.001f )
 {
 mag2 = Q_rsqrt( mag2 / (1 - stickvector[2] * stickvector[2]) );
 }
@@ -65,10 +64,10 @@ if ( pwmdir==REVERSE )
 	stickvector[2] = - stickvector[2];
 }
 #endif
-}
+// }
 
 // find error between stick vector and quad orientation
-// vector cross product 
+// vector cross product
   errorvect[1]= -((GEstG[1]*stickvector[2]) - (GEstG[2]*stickvector[1]));
   errorvect[0]= (GEstG[2]*stickvector[0]) - (GEstG[0]*stickvector[2]);
 
@@ -80,7 +79,7 @@ limitf( &errorvect[1] , 1.0);
 
 // fix to recover if triggered inverted
 // the vector cross product results in zero for opposite vectors, so it's bad at 180 error
-// without this the quad will not invert if angle difference = 180 
+// without this the quad will not invert if angle difference = 180
 
 #ifdef INVERTED_ENABLE
 
@@ -89,7 +88,7 @@ static int flipaxis = 0;
 static int flipdir = 0;
 int flip_active = 0;
 
-#define rollrate 2.0f
+#define rollrate 1.0f
 #define g_treshold 0.125f
 #define roll_bias 0.25f
 
@@ -98,27 +97,27 @@ if ( aux[FN_INVERTED]  && (GEstG[2] > g_treshold) )
 	flip_active = 1;
 	// rotate around axis with larger leaning angle
 
-		if ( flipdir ) 
+		if ( flipdir )
 		{
 			errorvect[flipaxis] = rollrate;
 		}
-		else 
+		else
 		{
-			errorvect[flipaxis] = -rollrate;			
+			errorvect[flipaxis] = -rollrate;
 		}
-		
+
 }
 else if ( !aux[FN_INVERTED]  && (GEstG[2] < -g_treshold) )
 {
 	flip_active = 1;
 
-		if ( flipdir ) 
+		if ( flipdir )
 		{
 			errorvect[flipaxis] = -rollrate;
 		}
-		else 
+		else
 		{
-			errorvect[flipaxis] = rollrate;			
+			errorvect[flipaxis] = rollrate;
 		}
 
 }
@@ -139,18 +138,18 @@ if ( flip_active )
 		}
 		else
 			flipaxis = 1;
-	
+
 	if (  GEstG[flipaxis] > 0 )
 		flipdir = 1;
 	else
 		flipdir = 0;
-	
+
 	flip_active_once = 1;
 	}
-	
+
 	// set the error in other axis to return to zero
-	errorvect[!flipaxis] = GEstG[!flipaxis]; 
-	
+	errorvect[!flipaxis] = GEstG[!flipaxis];
+
 }
 #endif
 

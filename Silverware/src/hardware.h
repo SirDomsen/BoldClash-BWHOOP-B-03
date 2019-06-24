@@ -20,7 +20,7 @@
 
 // the error codes indicate a failure that prevents normal operation
 // led flash codes - the quad will not fly / bind if flashing a code
-// 2 - low battery at powerup - if enabled by config.h "#define STOP_LOWBATTERY" 
+// 2 - low battery at powerup - if enabled by config.h "#define STOP_LOWBATTERY"
 // 3 - radio chip not found
 // 4 - Gyro not found - maybe i2c speed
 // 5 - clock , intterrupts , systick , gcc bad code , bad memory access (code issues like bad pointers)- this should not come up
@@ -54,14 +54,14 @@
 // i2c driver to use ( dummy - disables i2c )
 // hardware i2c used PB6 and 7 by default ( can also use PA9 and 10)
 
-//#define USE_HARDWARE_I2C
-#define USE_SOFTWARE_I2C
+#define USE_HARDWARE_I2C
+// #define USE_SOFTWARE_I2C
 //#define USE_DUMMY_I2C
 
 // for boards without a SCL pullup - E011 ( nonstandard i2c )
 //#define SOFTI2C_PUSHPULL_CLK
 
-// I2C speed: fast = no delays 
+// I2C speed: fast = no delays
 // slow1 = for i2c without pull-up resistors
 // slow2 = i2c failsafe speed
 #define SOFTI2C_SPEED_FAST
@@ -69,6 +69,7 @@
 //#define SOFTI2C_SPEED_SLOW2
 
 // hardware i2c speed ( 1000, 400 , 200 , 100Khz)
+// #define HW_I2C_SPEED_FAST_OC
 #define HW_I2C_SPEED_FAST2
 //#define HW_I2C_SPEED_FAST
 //#define HW_I2C_SPEED_SLOW1
@@ -100,13 +101,13 @@
 
 // gyro orientation
 // the expected orientation is with the dot in the front-left corner
-// use this to rotate to the correct orientation 
+// use this to rotate to the correct orientation
 // rotations performed in order
 // note, the motors don't get rotated,
 // so they have to be referenced to the new gyro position
 //#define SENSOR_ROTATE_45_CCW
-//#define SENSOR_ROTATE_45_CW
-#define SENSOR_ROTATE_90_CW
+#define SENSOR_ROTATE_45_CW
+// #define SENSOR_ROTATE_90_CW
 //#define SENSOR_ROTATE_90_CCW
 //#define SENSOR_ROTATE_180
 //#define SENSOR_FLIP_180
@@ -123,7 +124,9 @@
 
 // default for 1/2 divider
 // change this factor to get a correct battery voltage
-#define ADC_SCALEFACTOR 0.001364
+// #define ADC_SCALEFACTOR 0.001364
+// #define ADC_SCALEFACTOR 0.0053196 // 10k / (10k + 68k)
+#define ADC_SCALEFACTOR (0.005335/4.0)
 
 
 // SPI PINS DEFINITONS ( for radio ic )
@@ -156,7 +159,7 @@
 
 
 
-// PWM PINS DEFINITIONS 
+// PWM PINS DEFINITIONS
 
 
 // pwm driver = brushed motors
@@ -165,15 +168,23 @@
 
 //**DO NOT ENABLE ESC DRIVER WITH BRUSHED MOTORS ATTACHED**
 
-#define USE_PWM_DRIVER
+// #define USE_PWM_DRIVER
 //#define USE_ESC_DRIVER
-//#define USE_DSHOT_DMA_DRIVER
-//#define USE_DSHOT_DRIVER_BETA
+#define USE_DSHOT_DMA_DRIVER
+// #define USE_DSHOT_DRIVER_BETA
 
 // pass thru used with 1 of the above selections
 //#define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
-		
+
+// ------------- Select this for faster gyro read. Must use HARDWARE_I2C
+#define SIXAXIS_READ_DMA
+// ************* Sixaxis DMA BETA. Define channels to compare the sync
+#define GYRO_SYNC1 CHAN_OFF
+#define GYRO_SYNC2 CHAN_ON
+#define GYRO_SYNC3 CHAN_OFF // works only when LEVELMODE off and not onground
+
+
 // pwm pins disable
 // disable all pwm pins / function
 //#define DISABLE_PWM_PINS
@@ -229,16 +240,16 @@
 #define RGB_PORT GPIOA
 
 // pin for fpv switch ( turns off at failsafe )
-// GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK  
+// GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK
 // if programming pin, will not flash after bind
 #define FPV_PIN GPIO_Pin_13
-#define FPV_PORT GPIOA 
+#define FPV_PORT GPIOA
 
 
 // BUZZER pin settings - buzzer active "high"
 // SWDAT and SWCLK pins OK here
-// GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK 
-#define BUZZER_PIN       GPIO_Pin_x 
+// GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK
+#define BUZZER_PIN       GPIO_Pin_x
 #define BUZZER_PIN_PORT  GPIOA
 // x (micro)seconds after loss of tx or low bat before buzzer starts
-#define BUZZER_DELAY     30e6 
+#define BUZZER_DELAY     30e6

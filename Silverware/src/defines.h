@@ -21,8 +21,6 @@
 // this should be precalculated by the compiler as it's a constant
 #define FILTERCALC( sampleperiod, filtertime) (1.0f - ( 6.0f*(float)sampleperiod) / ( 3.0f *(float)sampleperiod + (float)filtertime))
 
-#define LPF(x , y , z )  lpfx( (x), (y) , ( z) , 1.0f - (z) )
-
 #define RXMODE_BIND 0
 #define RXMODE_NORMAL (!RXMODE_BIND)
 
@@ -80,6 +78,8 @@
 #define DEVO_CHAN_8 CH_VID
 #define DEVO_CHAN_9 CH_HEADFREE
 #define DEVO_CHAN_10 CH_RTH
+#define DEVO_CHAN_11 CH_TO
+#define DEVO_CHAN_12 CH_EMG
 
 // multimodule mapping ( taranis )
 #define MULTI_CHAN_5 CH_FLIP

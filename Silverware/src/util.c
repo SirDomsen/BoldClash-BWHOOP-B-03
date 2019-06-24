@@ -39,7 +39,7 @@ return ga;
 }
 
 
-// calculates the coefficient for lpf filter 
+// calculates the coefficient for lpf filter
 float lpfcalc_hz(float sampleperiod, float filterhz) {
 float ga = 1.0f - sampleperiod * filterhz;
 if (ga > 1.0f)
@@ -60,20 +60,14 @@ return ((x - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
 
 void lpf( float *out, float in , float coeff)
 {
-	*out = ( *out )* coeff + in * ( 1-coeff); 
-}
-
-
-void lpfx( float *out, float in , float coeff , float coeff2)
-{
-	*out = ( *out )* coeff + in * coeff2; 
+	*out = ( *out )* coeff + in * ( 1-coeff);
 }
 
 
 void limitf ( float *input , const float limit)
 {
 	if (*input > limit) *input = limit;
-	if (*input < - limit) *input = - limit;		
+	if (*input < - limit) *input = - limit;
 }
 
 float rcexpo ( float in , float exp )
@@ -93,12 +87,12 @@ unsigned long timeend;
 // timestart
 void TS( void)
 {
-	timestart = gettime(); 
+	timestart = gettime();
 }
 // timeend
 void TE( void)
 {
-	timeend =( gettime() - timestart );	
+	timeend =( gettime() - timestart );
 }
 
 
@@ -120,9 +114,9 @@ else
    sin1 = (1.27323954f - .405284735f * x) *x;
 
 
-return sin1; 
-    
-} 
+return sin1;
+
+}
 
 
 float fastcos( float x )
@@ -153,10 +147,10 @@ extern void buffer_add(int val );
 // print a 32bit signed int
 void print_int( int val )
 {
-#define SP_INT_BUFFERSIZE 12	
+#define SP_INT_BUFFERSIZE 12
 char buffer2[SP_INT_BUFFERSIZE];
- 
-	if (val < 0) 
+
+	if (val < 0)
 	{
 		buffer_add( (char) '-' );
 		val = abs(val);
@@ -171,7 +165,7 @@ do
 	int remainder = val-quotient*10;
 	val = quotient;
 	buffer2[power] = remainder+'0';
-}	
+}
 while (( val ) && power >=0) ;
 
 
@@ -190,16 +184,16 @@ void print_float( float val )
 
 	if ( val < 0 && ival == 0 ) buffer_add( (char) '-' );
 
-	print_int( ival ); 
-	
+	print_int( ival );
+
 	buffer_add( (char) '.' );
-	
+
 	val = val - (int) val;
-	
+
 	int decimals = val * 100;
-	
+
 	decimals = abs(decimals);
-	
+
 	if (decimals < 10) buffer_add( (char) '0' );
 	print_int( decimals );
 
@@ -209,7 +203,7 @@ void print_str(const char *str)
 {
 	int count = 0;
 	// a 64 character limit so we don't print the entire flash by mistake
-	while (str[count]&&!(count>>6) ) 
+	while (str[count]&&!(count>>6) )
 	{
 	buffer_add( (char) str[count] );
 	count++;

@@ -6,18 +6,18 @@
 
 // rate in deg/sec
 // for acro mode
-#define MAX_RATE 360.0
-#define MAX_RATEYAW 360.0
+#define MAX_RATE 1800.0
+#define MAX_RATEYAW 1800.0
 // use if your tx has no expo function
 // 0.00 to 1.00 , 0 = no exp
-// positive = less sensitive near center 
+// positive = less sensitive near center
 #define ACRO_EXPO_XY 0.0
 #define ACRO_EXPO_YAW 0.0
 
 
 
 // max angle for level mode
-#define LEVEL_MAX_ANGLE 70.0f
+#define LEVEL_MAX_ANGLE 80.0f
 #define EXPO_XY 0.0
 #define EXPO_YAW 0.0
 
@@ -33,7 +33,7 @@
 
 // voltage to start warning
 // volts
-#define VBATTLOW 3.5
+#define VBATTLOW 3.6
 
 // compensation for battery voltage vs throttle drop
 #define VDROP_FACTOR 0.7
@@ -47,11 +47,12 @@
 
 
 // lower throttle when battery below threshold
-//#define LVC_LOWER_THROTTLE
+#define LVC_LOWER_THROTTLE
 #define LVC_LOWER_THROTTLE_VOLTAGE 3.30
 #define LVC_LOWER_THROTTLE_VOLTAGE_RAW 2.70
 #define LVC_LOWER_THROTTLE_KP 3.0
 
+#define PID_VOLTAGE_COMPENSATION
 
 
 // Gyro LPF filter frequency
@@ -59,7 +60,7 @@
 // gyro filter 1 = 184hz delay 2.9mS
 // gyro filter 2 = 92hz delay 3.9mS
 // gyro filter 3 = 41hz delay 5.9mS (Default)
-#define GYRO_LOW_PASS_FILTER 3
+#define GYRO_LOW_PASS_FILTER 0
 
 
 // software gyro lpf ( iir )
@@ -71,10 +72,18 @@
 //#define SOFT_LPF_4TH_088HZ
 //#define SOFT_LPF_4TH_160HZ
 //#define SOFT_LPF_4TH_250HZ
-#define SOFT_LPF_1ST_HZ 100
-//#define SOFT_LPF_2ND_HZ 100
+// #define SOFT_LPF_1ST_HZ_BASE 80
+// #define SOFT_LPF_1ST_HZ_MAX 300
+// #define SOFT_LPF_1ST_HZ ( SOFT_LPF_1ST_HZ_BASE + 4 * throttle * ( SOFT_LPF_1ST_HZ_MAX - SOFT_LPF_1ST_HZ_BASE ) ) // * 4 .. MAX reached at 1/4 throttle
+//#define SOFT_LPF_1ST_HZ 100
+// #define SOFT_LPF_2ND_HZ
+// #define SOFT_LPF_2ND_HZ_BASE 100 * ( aux[FN_INVERTED] ? 0.75f : 1.0f )
+// #define SOFT_LPF_2ND_HZ_MAX 300 // A higher filter frequency than 333 causes ripples.
+// #define SOFT_LPF_2ND_HZ_THROTTLE 0.25
 //#define SOFT_KALMAN_GYRO KAL1_HZ_90
-//#define SOFT_LPF_NONE
+#define SOFT_BIQUAD_NOTCH_HZ 260
+#define SOFT_BIQUAD_NOTCH_Q 6
+// #define SOFT_LPF_NONE
 
 // transmitter type
 //#define USE_STOCK_TX
@@ -100,25 +109,28 @@
 // CHAN_5 - CHAN_10 - auto based on tx selection
 
 // rates / expert mode
-#define RATES CH_EXPERT
+#define RATES DEVO_CHAN_9
 
-#define LEVELMODE CH_AUX1
+#define LEVELMODE DEVO_CHAN_10
 
 #define STARTFLIP CH_OFF
 
-#define LEDS_ON CH_ON
+#define LEDS_ON DEVO_CHAN_7
 
 // switch for fpv / other, requires fet
 // comment out to disable
 //#define FPV_ON CH_ON
 
+// Airmode keeps the PID loop stabilizing the quads orientation even at zero throttle.
+// To stop the motors on ground a switch on the remote control is necessary.
+#define AIRMODE_HOLD_SWITCH DEVO_CHAN_5
 
 // enable inverted flight code ( brushless only )
-//#define INVERTED_ENABLE
-//#define FN_INVERTED CH_OFF //for brushless only
+#define INVERTED_ENABLE
+#define FN_INVERTED DEVO_CHAN_6 //for brushless only
 
 // aux1 channel starts on if this is defined, otherwise off.
-#define AUX1_START_ON
+// #define AUX1_START_ON
 
 // automatically remove center bias ( needs throttle off for 1 second )
 //#define STOCK_TX_AUTOCENTER
@@ -127,7 +139,7 @@
 // motorfilter1: hanning 3 sample fir filter
 // motorfilter2: 1st lpf, 0.2 - 0.6 , 0.6 = less filtering
 //#define MOTOR_FILTER
-#define MOTOR_FILTER2_ALPHA 0.3
+// #define MOTOR_FILTER2_ALPHA 0.3
 //#define MOTOR_KAL KAL1_HZ_70
 //#define MOTOR_KAL_2ND KAL1_HZ_90
 
@@ -142,20 +154,20 @@
 // motor curve to use
 // the pwm frequency has to be set independently
 // 720motors - use 8khz and curve none.
-//#define MOTOR_CURVE_NONE
+#define MOTOR_CURVE_NONE
 //#define MOTOR_CURVE_6MM_490HZ
 //#define MOTOR_CURVE_85MM_8KHZ
 //#define MOTOR_CURVE_85MM_32KHZ
 //#define BOLDCLASH_716MM_8K
-#define BOLDCLASH_716MM_24K
+// #define BOLDCLASH_716MM_24K
 
 // a filter which makes throttle feel faster
-//#define THROTTLE_TRANSIENT_COMPENSATION 
+#define THROTTLE_TRANSIENT_COMPENSATION
 // if the quad resets , or for brushless ,try a lower value
-#define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 7.0 
+#define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 3.0
 
 // lost quad beeps using motors (30 sec timeout)
-//#define MOTOR_BEEPS
+#define MOTOR_BEEPS
 
 // throttle angle compensation in level mode
 // comment out to disable
@@ -169,6 +181,11 @@
 
 //#define MIX_LOWER_THROTTLE_3
 //#define MIX_INCREASE_THROTTLE_3
+
+// Betaflight like mix scaling
+#define MIX_SCALING
+// Mix increasing yields a more crisp response but also a more jumpy quad at low RPM
+#define ALLOW_MIX_INCREASING
 
 // Radio protocol selection
 // select only one
@@ -208,12 +225,23 @@
 //#define FLASH_SAVE2
 
 
-//#define PID_ROTATE_ERRORS
+// Rotate I-term vector for a stable yaw axis (aka iTerm Rotation)
+#define PID_ROTATE_ERRORS
 
-// Removes roll and pitch bounce back after flips
-//#define TRANSIENT_WINDUP_PROTECTION
+// Removes roll and pitch bounce back after flips (aka iTerm Relax)
+#define TRANSIENT_WINDUP_PROTECTION
 
+// Feed fast roll/pitch-stick changes directly to the motors to give a snappier response
+// 0.0f (or commented out) equates D-term on measurement, 1.0f equates D-term on error.
+#define FEED_FORWARD_STRENGTH 1.0f
+//#define SMART_FF
 
+// Add linear interpolation between the otherwise 5 ms staircase steps of the RX signal
+#define RX_SMOOTHING
+
+// Use a square root motor curve to counteract thrust ~ RPM^2
+// 0.0f .. no compensation, 1.0f .. full square root curve
+#define THRUST_LINEARIZATION 0.5f
 
 
 //##################################
@@ -234,7 +262,7 @@
 // #define MOTORS_TO_THROTTLE
 
 // throttle direct to motors for thrust measure as a flight mode
-//#define MOTORS_TO_THROTTLE_MODE MULTI_CHAN_8
+#define MOTORS_TO_THROTTLE_MODE CH_AUX1
 
 
 // loop time in uS
@@ -245,10 +273,10 @@
 #define FAILSAFETIME 1000000  // one second
 
 // max rate used by level pid ( limit )
-#define LEVEL_MAX_RATE 360
+#define LEVEL_MAX_RATE 1800
 
 // invert yaw pid for hubsan motors
-//#define INVERT_YAW_PID
+#define INVERT_YAW_PID
 
 // debug things ( debug struct and other)
 //#define DEBUG
@@ -263,8 +291,11 @@
 #define ENABLESTIX_TRESHOLD 0.3
 #define ENABLESTIX_TIMEOUT 1e6
 
+// A deadband can be used to eliminate stick center jitter and non-returning to exactly 0.
+#define STICKS_DEADBAND 0.02f
+
 // overclock to 64Mhz
-//#define ENABLE_OVERCLOCK
+#define ENABLE_OVERCLOCK
 
 
 // limit minimum motor output to a value (0.0 - 1.0)
