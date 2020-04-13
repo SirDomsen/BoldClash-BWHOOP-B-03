@@ -35,8 +35,8 @@ THE SOFTWARE.
 // #define  DTERM_LPF_2ND_HZ 50
 #define  DYNAMIC_DTERM_LPF_2ND
 
-#define AA_filterBaseFrequency ( 40*aux_analog[1] * ( aux[FN_INVERTED] ? 0.8f : 1.0f ) )
-#define AA_filterMaxFrequency 60*aux_analog[1] // A higher filter frequency than 333 causes ripples.
+#define AA_filterBaseFrequency ( 40 * ( aux[FN_INVERTED] ? 0.8f : 1.0f ) )
+#define AA_filterMaxFrequency 60 // A higher filter frequency than 333 causes ripples.
 #define AA_filterScaler 2 * throttle * ( AA_filterMaxFrequency - AA_filterBaseFrequency ) // Reaches AA_filterMaxFrequency at 1/2 throttle.
 
 // aux_analog[0] -- aux_analog[1]
@@ -44,11 +44,9 @@ THE SOFTWARE.
 #define AA_pdScaleYawStabilizer 1.2f // multiply pdScaleValue by this value at full yaw
 static float pdScaleValue; // updated in pid_precalc()
 
-// #define AA_pidkp ( x < 2 ? pdScaleValue * aux_analog[0] : 1.0f ) // Scale Kp and Kd only for roll and pitch.
-#define AA_pidkp ( x < 2 ? pdScaleValue * 1 : 1.0f ) // Scale Kp and Kd only for roll and pitch.
+#define AA_pidkp ( x < 2 ? pdScaleValue * aux_analog[0] : 1.0f ) // Scale Kp and Kd only for roll and pitch.
 #define AA_pidki 1.0f
-// #define AA_pidkd ( x < 2 ? pdScaleValue * aux_analog[1] : 1.0f ) // Scale Kp and Kd only for roll and pitch.
-#define AA_pidkd ( x < 2 ? pdScaleValue * 1 : 1.0f ) // Scale Kp and Kd only for roll and pitch.
+#define AA_pidkd ( x < 2 ? pdScaleValue * aux_analog[1] : 1.0f ) // Scale Kp and Kd only for roll and pitch.
 
 #define AA_pidScaleInverted 1.2f // multiply by this value when flying inverted
 
@@ -76,9 +74,9 @@ static float pdScaleValue; // updated in pid_precalc()
 #include "defines.h"
 #include <math.h>
 
-float pidkp[PIDNUMBER] = { 0.04, 5./4 * 0.04, 0.05 };
-float pidki[PIDNUMBER] = { 0.5, 5./4 * 0.5, 2.0 };
-float pidkd[PIDNUMBER] = { 0.2, 5./4 * 0.2, 0.0 };
+float pidkp[PIDNUMBER] = { 0.04, 0.04, 0.04 };
+float pidki[PIDNUMBER] = { 0.40, 0.40, 2.0 };
+float pidkd[PIDNUMBER] = { 0.20, 0.20, 0.0 };
 
 // "setpoint weighting" 0.0 - 1.0 where 1.0 = normal pid
 // #define ENABLE_SETPOINT_WEIGHTING
@@ -116,7 +114,8 @@ extern float gyro[3];
 extern float gyro_unfiltered[3];
 extern int onground;
 extern float looptime;
-extern float vbattfilt;
+// extern float vbattfilt;
+extern float vbatt_comp;
 extern float battery_scale_factor;
 extern float rxcopy[];
 extern float aux_analog[];
@@ -182,6 +181,14 @@ float pid(int x )
     }
 #endif
 
+#ifdef DYNAMIC_ITERM_RESET
+    static float lastGyro[ 3 ];
+    if ( fabsf( ierror[ x ] ) > integrallimit[ x ] * 0.2f * battery_scale_factor && ( gyro[ x ] < 0.0f != lastGyro[ x ] < 0.0f ) ) { // gyro crossed zero
+        ierror[ x ] *= 0.2f;
+    }
+    lastGyro[ x ] = gyro[ x ];
+#endif // DYNAMIC_ITERM_RESET
+
     if ( !iwindup)
     {
         #ifdef MIDPOINT_RULE_INTEGRAL
@@ -203,7 +210,7 @@ float pid(int x )
         #endif
     }
 
-    limitf( &ierror[x] , integrallimit[x] );
+    limitf( &ierror[x] , integrallimit[x] * battery_scale_factor );
 
 
     #ifdef ENABLE_SETPOINT_WEIGHTING
@@ -216,10 +223,11 @@ float pid(int x )
     pidoutput[x] = error[x] * pidkp[x] * AA_pidkp;
     #endif
 
+	if ( x < 2 ) { // Only for roll and pitch.
+
 // https://www.rcgroups.com/forums/showpost.php?p=39606684&postcount=13846
 // https://www.rcgroups.com/forums/showpost.php?p=39667667&postcount=13956
 #ifdef FEED_FORWARD_STRENGTH
-	if ( x < 2 ) {
 
 #ifdef RX_SMOOTHING
 		static float lastSetpoint[2];
@@ -240,7 +248,7 @@ float pid(int x )
 			--ffCount[x];
 			ff = setpointDiff[x] * timefactor * FEED_FORWARD_STRENGTH * pidkd[x] * AA_pidkd;
 		}
-#endif
+#endif // RX_SMOOTHING
 
 		// // 16 point moving average filter to smooth out the 5 ms steps:
 		// #define MA_SIZE ( 1 << 4 ) // power of two
@@ -276,9 +284,28 @@ float pid(int x )
 		}
 #else
 		pidoutput[x] += ff;
-#endif
-	}
-#endif
+#endif // SMART_FF
+
+#endif // FEED_FORWARD_STRENGTH
+
+    } else { // x == 2: yaw
+
+#ifdef FEED_FORWARD_YAW
+    #ifndef RX_SMOOTHING
+        #error "FEED_FORWARD_YAW only works with RX_SMOOTHING enabled."
+    #endif
+        static float lastSetpointYaw;
+        float ff = ( setpoint[ x ] - lastSetpointYaw ) * timefactor * FEED_FORWARD_YAW;
+        lastSetpointYaw = setpoint[ x ];
+
+        static float avgFFyaw;
+        lpf( &avgFFyaw, ff, FILTERCALC( 0.001, 1.0f / 20.0f ) ); // 20 Hz
+        ff = avgFFyaw;
+
+        pidoutput[ x ] += ff;
+#endif // FEED_FORWARD_YAW
+
+    }
 
     // I term
     pidoutput[x] += ierror[x];
@@ -366,7 +393,8 @@ void pid_precalc()
 	timefactor = 0.0032f / looptime;
 
 #ifdef PID_VOLTAGE_COMPENSATION
-    v_compensation = mapf ( vbattfilt , 3.00 , 4.00 , PID_VC_FACTOR , 1.00);
+    // v_compensation = mapf ( vbattfilt , 3.00 , 4.00 , PID_VC_FACTOR , 1.00);
+    v_compensation = mapf ( vbatt_comp , 3.00 , 4.00 , PID_VC_FACTOR , 1.00);
     if( v_compensation > PID_VC_FACTOR) v_compensation = PID_VC_FACTOR;
     if( v_compensation < 1.00f) v_compensation = 1.00;
 #endif
@@ -374,8 +402,8 @@ void pid_precalc()
     pdScaleValue = 1.0f; // constant (no throttle dependent scaling)
 
 #ifdef AA_pdScaleYawStabilizer
-	// const float absyaw = fabsf( rxcopy[2] );
-	const float absyaw = fabsf( gyro[2] / ( (float)MAX_RATEYAW * DEGTORAD ) );
+	const float absyaw = fabsf( rxcopy[2] );
+	// const float absyaw = fabsf( gyro[2] / ( (float)MAX_RATEYAW * DEGTORAD ) );
 	pdScaleValue *= 1 + absyaw * ( AA_pdScaleYawStabilizer - 1 ); // Increase Kp and Kd on high yaw speeds to avoid iTerm Rotation related wobbles.
 #endif
 
@@ -514,8 +542,13 @@ int next_pid_term()
 			current_pid_term = 1;
 			break;
 		case 1:
-			current_pid_term_pointer = pidkd;
-			current_pid_term = 2;
+			if ( pidkd[ current_pid_axis ] == 0.0f ) { // Skip a zero D term, and go directly to P
+				current_pid_term_pointer = pidkp;
+				current_pid_term = 0;
+			} else {
+				current_pid_term_pointer = pidkd;
+				current_pid_term = 2;
+			}
 			break;
 		case 2:
 			current_pid_term_pointer = pidkp;

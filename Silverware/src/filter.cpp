@@ -412,8 +412,8 @@ filter_kalman filter[3];
 
 
 #ifdef SOFT_BIQUAD_NOTCH_HZ
-extern "C" float fastsin( float x );
-extern "C" float fastcos( float x );
+extern "C" float sin_approx( float x );
+extern "C" float cos_approx( float x );
 
 static float b0, b1, b2, a0, a1, a2;
 
@@ -421,8 +421,8 @@ extern "C" void notch_init( float filter_f, float Q )
 {
     // setup variables
     const float omega = 2.0f * 3.1416f * filter_f * 0.001f;
-    const float sn = fastsin(omega);
-    const float cs = fastcos(omega);
+    const float sn = sin_approx(omega);
+    const float cs = cos_approx(omega);
     const float alpha = sn / (2.0f * Q);
 
     b0 =  1;

@@ -307,6 +307,7 @@ void beacon_sequence()
 
 
 extern int lowbatt;
+extern int onground;
 extern float vbattfilt;
 extern float vbatt_comp;
 
@@ -322,6 +323,7 @@ void send_telemetry()
     int vbatt = vbattfilt * 100 + .5f;
 // battery volt filtered
 
+if ( aux[LEVELMODE] ) {
   extern float accel[3];
   extern int calibration_done;
   static float maxg = 0;
@@ -331,7 +333,6 @@ void send_telemetry()
   if (aux[CH_EMG]) {
     maxg = 0;
   }
-if (aux[CH_ON]) {
   vbatt = maxg * 100;
 }
 
@@ -359,7 +360,7 @@ if (aux[CH_ON]) {
 
     txdata[7] = temp;           // rx strenght
 
-    if (lowbatt)
+    if (lowbatt && ! onground)
         txdata[3] |= (1 << 3);
 
 #define DISPLAY_PID_VALUES

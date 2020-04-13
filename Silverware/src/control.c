@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+#include <stdbool.h>
 #include <inttypes.h>
 #include <math.h>
 
@@ -56,6 +57,7 @@ int onground_long = 1;
 float thrsum;
 float mixmax;
 float throttle_reversing_kick;
+float throttle_reversing_kick_sawtooth;
 float throttle_reversing_kick_decrement;
 
 float error[PIDNUMBER];
@@ -124,8 +126,11 @@ float rate_multiplier = 1.0;
 		throttlehpf_reset();
 		extern void lpf2_reset(void);
 		lpf2_reset();
-		throttle_reversing_kick = 0.1f;
-		throttle_reversing_kick_decrement = throttle_reversing_kick / 100.0f; // 100 ms
+		extern float battery_scale_factor;
+		throttle_reversing_kick = THROTTLE_REVERSING_KICK * ( ( battery_scale_factor - 1.0f ) * 1.5f + 1.0f );
+		#define TRKD 100000.0f // 100 ms throttle reversing kick duration
+		throttle_reversing_kick_sawtooth = throttle_reversing_kick * ( TRKD + (float)THROTTLE_REVERSING_DEADTIME ) / TRKD;
+		throttle_reversing_kick_decrement = throttle_reversing_kick_sawtooth * (float)1000 / ( TRKD + (float)THROTTLE_REVERSING_DEADTIME );
 	}
 
 	if ( aux[FN_INVERTED]  )
@@ -157,6 +162,9 @@ float rate_multiplier = 1.0;
 
 	rxcopy[3] = rx[3];
 
+	const float mixRangeLimit = MIX_RANGE_LIMIT;
+	rxcopy[3] *= mixRangeLimit;
+
 #ifdef RX_SMOOTHING
 	static float rxsmooth[4];
 	static float lastRXcopy[4];
@@ -166,6 +174,7 @@ float rate_multiplier = 1.0;
 		if ( rxcopy[i] != lastRXcopy[i] ) {
 			stepRX[i] = ( rxcopy[i] - lastRXcopy[i] ) / 5; // Spread it evenly over 5 ms (PACKET_PERIOD)
 			countRX[i] = 5;
+			rxsmooth[ i ] = lastRXcopy[ i ];
 			lastRXcopy[i] = rxcopy[i];
 		}
 		if ( countRX[i] > 0 ) {
@@ -267,9 +276,36 @@ float throttle = rxcopy[3]; // MGr: Control throttle dead zone in the Devo.
 	throttle = throttle * ( throttle * aa + 1 - aa ); // invert the motor curve correction applied further below
 #endif
 
+	static unsigned long motors_failsafe_time = 1;
+	bool motors_failsafe = false;
+	if ( failsafe ) {
+		if ( motors_failsafe_time == 0 ) {
+			motors_failsafe_time = gettime();
+		}
+		if ( gettime() - motors_failsafe_time > MOTORS_FAILSAFETIME ) {
+			motors_failsafe = true; // MOTORS_FAILSAFETIME after failsafe we turn off the motors.
+		}
+	} else {
+		motors_failsafe_time = 0;
+	}
 
 #ifdef AIRMODE_HOLD_SWITCH
-	if (failsafe || aux[AIRMODE_HOLD_SWITCH]) // MGr: Spin props immediately (only safe with *sticky* throttle hold!)
+	// Prevent startup if the TX is turned on with the AIRMODE_HOLD_SWITCH not activated:
+	static bool tx_just_turned_on = true;
+	bool prevent_start = false;
+	if ( tx_just_turned_on ) {
+		if ( ! aux[ AIRMODE_HOLD_SWITCH ] ) {
+			prevent_start = true;
+		} else {
+			tx_just_turned_on = false;
+		}
+	} else {
+		// if ( motors_failsafe ) {
+		// 	tx_just_turned_on = true;
+		// }
+	}
+
+	if ( motors_failsafe || aux[AIRMODE_HOLD_SWITCH] || prevent_start ) // MGr: Spin props immediately (only safe with *sticky* throttle hold!)
 	{
 		onground_long = 0;
 #else
@@ -296,8 +332,8 @@ float throttle = rxcopy[3]; // MGr: Control throttle dead zone in the Devo.
 		}
 
 		#ifdef MOTOR_BEEPS
-		extern void motorbeep( void);
-		motorbeep();
+		extern void motorbeep(bool motors_failsafe);
+		motorbeep(motors_failsafe);
 		#endif
 
 		#ifdef MIX_LOWER_THROTTLE
@@ -341,8 +377,10 @@ float throttle = rxcopy[3]; // MGr: Control throttle dead zone in the Devo.
  #define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 7.0
 #endif
 extern float throttlehpf( float in );
-if (aux[RATES]) {
-		  throttle += (float) (THROTTLE_TRANSIENT_COMPENSATION_FACTOR) * throttlehpf(throttle);
+const float transient_value = throttlehpf(throttle); // Keep the HPF call in the loop to keep its state updated.
+extern int lowbatt;
+if (aux[RATES] && ! lowbatt) {
+		  throttle += (float) (THROTTLE_TRANSIENT_COMPENSATION_FACTOR) * transient_value;
 		  if (throttle < 0)
 			  throttle = 0;
 		  if (throttle > 1.0f)
@@ -356,14 +394,19 @@ if (aux[RATES]) {
 	}
 
 
-	// throttle = 0;
-	// pidoutput[0] = pidoutput[1] = pidoutput[2] = 0;
-	if ( throttle_reversing_kick > 0 ) {
-		if ( throttle < throttle_reversing_kick ) {
-			throttle = throttle_reversing_kick;
+		if ( throttle_reversing_kick_sawtooth > 0.0f ) {
+			if ( throttle_reversing_kick_sawtooth > throttle_reversing_kick ) {
+				throttle = 0.0f;
+				pidoutput[ 0 ] = pidoutput[ 1 ] = pidoutput[ 2 ] = 0.0f;
+			} else {
+				const float transitioning_factor = ( throttle_reversing_kick - throttle_reversing_kick_sawtooth ) / throttle_reversing_kick;
+				throttle = throttle * transitioning_factor + throttle_reversing_kick_sawtooth;
+				pidoutput[ 0 ] *= transitioning_factor;
+				pidoutput[ 1 ] *= transitioning_factor;
+				pidoutput[ 2 ] *= transitioning_factor;
+			}
+			throttle_reversing_kick_sawtooth -= throttle_reversing_kick_decrement;
 		}
-		throttle_reversing_kick -= throttle_reversing_kick_decrement;
-	}
 
 
 		  // throttle angle compensation
@@ -657,6 +700,24 @@ if ( underthrottle < -0.01f) ledcommand = 1;
 
 
  #ifdef MIX_SCALING
+	#define TRANSIENT_MIX_INCREASING_HZ 2.0
+	#ifdef TRANSIENT_MIX_INCREASING_HZ
+		float maxSpeedRxcopy = 0.0f;
+		static float lastRxcopy[ 4 ];
+		for ( int i = 0; i < 4; ++i ) {
+			const float absSpeedRxcopy = fabsf( rxcopy[ i ] - lastRxcopy[ i ] ) / 0.001f * 0.1f;
+			lastRxcopy[ i ] = rxcopy[ i ];
+			if ( absSpeedRxcopy > maxSpeedRxcopy ) {
+				maxSpeedRxcopy = absSpeedRxcopy;
+			}
+		}
+		static float transientMixIncreaseLimit;
+		lpf( &transientMixIncreaseLimit, maxSpeedRxcopy, FILTERCALC( 0.001, 1.0f / (float)TRANSIENT_MIX_INCREASING_HZ ) );
+		if ( transientMixIncreaseLimit > 1.0f ) {
+			transientMixIncreaseLimit = 1.0f;
+		}
+	#endif // TRANSIENT_MIX_INCREASING_HZ
+
 		float minMix = 1000.0f;
 		float maxMix = -1000.0f;
 		for (int i = 0; i < 4; ++i) {
@@ -665,22 +726,29 @@ if ( underthrottle < -0.01f) ledcommand = 1;
 		}
 		const float mixRange = maxMix - minMix;
 		float reduceAmount = 0.0f;
-		if (mixRange > 1.0f) {
-			const float scale = 1.0f / mixRange;
+		if (mixRange > mixRangeLimit) {
+			const float scale = mixRangeLimit / mixRange;
 			for (int i = 0; i < 4; ++i)
 				mix[i] *= scale;
 			minMix *= scale;
 			reduceAmount = minMix;
 		} else {
-			if (maxMix > 1.0f)
-				reduceAmount = maxMix - 1.0f;
-			else
-#ifdef ALLOW_MIX_INCREASING
-			if (minMix < 0.0f)
+			if (maxMix > mixRangeLimit)
+				reduceAmount = maxMix - mixRangeLimit;
+			else if (minMix < 0.0f) {
 				reduceAmount = minMix;
-#endif // ALLOW_MIX_INCREASING
+			}
 		}
+	#ifdef ALLOW_MIX_INCREASING
 		if (reduceAmount != 0.0f)
+	#else
+		if ( reduceAmount > 0.0f ) {
+	#endif // ALLOW_MIX_INCREASING
+	#ifdef TRANSIENT_MIX_INCREASING_HZ
+			if ( reduceAmount < -transientMixIncreaseLimit ) {
+				reduceAmount = -transientMixIncreaseLimit;
+			}
+	#endif // TRANSIENT_MIX_INCREASING_HZ
 			for (int i = 0; i < 4; ++i)
 				mix[i] -= reduceAmount;
 #endif // MIX_SCALING
@@ -710,10 +778,10 @@ mixmax = 0;
 		if ( throttle > 0 ) {
 			idle_offset = orig_idle_offset;
 		}
-		if ( ( i == MOTOR_FL - 1 && rxcopy[ ROLL ] < 0 && rxcopy[ PITCH ] > 0 ) ||
-			( i == MOTOR_BL - 1 && rxcopy[ ROLL ] < 0 && rxcopy[ PITCH ] < 0 ) ||
-			( i == MOTOR_FR - 1 && rxcopy[ ROLL ] > 0 && rxcopy[ PITCH ] > 0 ) ||
-			( i == MOTOR_BR - 1 && rxcopy[ ROLL ] > 0 && rxcopy[ PITCH ] < 0 ) )
+		if ( ( i == MOTOR_FL && rxcopy[ ROLL ] < 0 && rxcopy[ PITCH ] > 0 ) ||
+			( i == MOTOR_BL && rxcopy[ ROLL ] < 0 && rxcopy[ PITCH ] < 0 ) ||
+			( i == MOTOR_FR && rxcopy[ ROLL ] > 0 && rxcopy[ PITCH ] > 0 ) ||
+			( i == MOTOR_BR && rxcopy[ ROLL ] > 0 && rxcopy[ PITCH ] < 0 ) )
 		{
 			idle_offset = 0;
 			mix[ i ] = fabsf( rxcopy[ ROLL ] * rxcopy[ PITCH ] );
@@ -744,6 +812,9 @@ mixmax = 0;
 		#ifndef MOTORS_TO_THROTTLE
 		//normal mode
 
+		if ( mix[i] < 0 ) mix[i] = 0;
+		if ( mix[i] > 1 ) mix[i] = 1;
+
 #ifdef THRUST_LINEARIZATION
 				// Computationally quite expensive:
 				static float a, a_reci, b, b_sq;
@@ -755,12 +826,11 @@ mixmax = 0;
 						b_sq = b * b;
 					}
 				}
-				float test = mix[i];
-				if ( test > 0.0f && a > 0.0f ) {
+				if ( mix[i] > 0.0f && a > 0.0f ) {
 					extern float Q_rsqrt( float number );
-					test = 1 / Q_rsqrt( mix[i] * a_reci + b_sq ) - b;
+					mix[i] = 1 / Q_rsqrt( mix[i] * a_reci + b_sq ) - b;
 				}
-				pwm_set( i, test );
+				pwm_set( i, mix[i] );
 #else
 		pwm_set( i ,motormap( mix[i] ) );
 #endif
@@ -776,8 +846,6 @@ mixmax = 0;
 		tempx[i] = motormap( mix[i] );
 		#endif
 
-		if ( mix[i] < 0 ) mix[i] = 0;
-		if ( mix[i] > 1 ) mix[i] = 1;
 		thrsum+= mix[i];
 		if ( mixmax < mix[i] ) {
 			mixmax = mix[i];

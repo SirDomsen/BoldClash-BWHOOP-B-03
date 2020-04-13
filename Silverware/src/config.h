@@ -128,6 +128,7 @@
 // enable inverted flight code ( brushless only )
 #define INVERTED_ENABLE
 #define FN_INVERTED DEVO_CHAN_6 //for brushless only
+// #define LEVEL_MODE_INVERTED_ENABLE // be careful when enabling this
 
 // aux1 channel starts on if this is defined, otherwise off.
 // #define AUX1_START_ON
@@ -166,6 +167,10 @@
 // if the quad resets , or for brushless ,try a lower value
 #define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 3.0
 
+// For smoother motor reversing in 3D flight
+#define THROTTLE_REVERSING_KICK 0.2f
+#define THROTTLE_REVERSING_DEADTIME 20000 // 20 ms
+
 // lost quad beeps using motors (30 sec timeout)
 #define MOTOR_BEEPS
 
@@ -186,6 +191,8 @@
 #define MIX_SCALING
 // Mix increasing yields a more crisp response but also a more jumpy quad at low RPM
 #define ALLOW_MIX_INCREASING
+// Can be used to limit maximum motor RPM, i.e. tone down a too fast quad.
+#define MIX_RANGE_LIMIT aux[ DEVO_CHAN_11 ] ? 0.75f : 1.0f
 
 // Radio protocol selection
 // select only one
@@ -230,18 +237,22 @@
 
 // Removes roll and pitch bounce back after flips (aka iTerm Relax)
 #define TRANSIENT_WINDUP_PROTECTION
+// Remove bounce back when quickly stopping a roll/pitch/yaw movement (but it is mostly there for yaw)
+#define DYNAMIC_ITERM_RESET
 
 // Feed fast roll/pitch-stick changes directly to the motors to give a snappier response
 // 0.0f (or commented out) equates D-term on measurement, 1.0f equates D-term on error.
-#define FEED_FORWARD_STRENGTH 1.0f
+//#define FEED_FORWARD_STRENGTH 1.0f
 //#define SMART_FF
+// Feedforward for yaw. It's an absolute value, not related to the 0 .. 1 from above.
+//#define FEED_FORWARD_YAW 0.2f
 
 // Add linear interpolation between the otherwise 5 ms staircase steps of the RX signal
 #define RX_SMOOTHING
 
 // Use a square root motor curve to counteract thrust ~ RPM^2
 // 0.0f .. no compensation, 1.0f .. full square root curve
-#define THRUST_LINEARIZATION 0.5f
+#define THRUST_LINEARIZATION 0.33f
 
 
 //##################################
@@ -269,8 +280,10 @@
 // this affects soft gyro lpf frequency if used
 #define LOOPTIME 1000
 
-// failsafe time in uS
-#define FAILSAFETIME 1000000  // one second
+// Failsafe time in us. Sets stick inputs to zero after FAILSAFETIME no RX signal. Keeps quad stabilized.
+#define FAILSAFETIME 100000  // 0.1 seconds
+// Motors failsafe time in us. Shuts motors down after additional MOTORS_FAILSAFETIME.
+#define MOTORS_FAILSAFETIME 3000000 // 3 seconds
 
 // max rate used by level pid ( limit )
 #define LEVEL_MAX_RATE 1800

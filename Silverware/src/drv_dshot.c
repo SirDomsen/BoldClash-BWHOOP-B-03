@@ -95,11 +95,9 @@
 #endif
 #endif
 
-extern int failsafe;
 extern int onground;
 
 int pwmdir = 0;
-static unsigned long pwm_failsafe_time = 1;
 static int motor_data[ 48 ] = { 0 };
 
 typedef enum { false, true } bool;
@@ -154,9 +152,6 @@ void pwm_init()
 	GPIO_InitStructure.GPIO_Pin = DSHOT_PIN_3 ;
 	GPIO_Init( DSHOT_PORT_3, &GPIO_InitStructure );
 
-	// set failsafetime so signal is off at start
-	pwm_failsafe_time = gettime() - 100000;
-
 	pwmdir = FORWARD;
 }
 
@@ -194,29 +189,6 @@ void pwm_set( uint8_t number, float pwm )
 
 	if ( onground ) {
 		value = 0; // stop the motors
-	}
-
-	if ( failsafe ) {
-		if ( ! pwm_failsafe_time ) {
-			pwm_failsafe_time = gettime();
-		} else {
-			// 1s after failsafe we turn off the signal for safety
-            // this means the escs won't rearm correctly after 2 secs of signal lost
-            // usually the quad should be gone by then
-			if ( gettime() - pwm_failsafe_time > 1000000 ) {
-				value = 0;
-
-                gpioreset( DSHOT_PORT_0, DSHOT_PIN_0 );
-                gpioreset( DSHOT_PORT_1, DSHOT_PIN_1 );
-                gpioreset( DSHOT_PORT_2, DSHOT_PIN_2 );
-                gpioreset( DSHOT_PORT_3, DSHOT_PIN_3 );
-                //////
-                return;
-
-			}
-		}
-	} else {
-		pwm_failsafe_time = 0;
 	}
 
 	make_packet( number, value, false );
@@ -503,12 +475,12 @@ void bitbang_data()
 #define MOTOR_BEEPS_TIMEOUT 0e6
 #endif
 
-void motorbeep()
+void motorbeep( bool motors_failsafe )
 {
 	static unsigned long motor_beep_time = 0;
 	unsigned long time = gettime();
 	extern char aux[];
-	if ( failsafe && time > 60e6 || aux[DEVO_CHAN_12] ) {
+	if ( motors_failsafe && time > 60e6 || aux[DEVO_CHAN_12] ) {
 		unsigned long time = gettime();
 		if ( motor_beep_time == 0 ) {
 			motor_beep_time = time;

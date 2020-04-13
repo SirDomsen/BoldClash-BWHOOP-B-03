@@ -314,9 +314,11 @@ if ( liberror )
         // all flight calculations and motors
 		control();
 
+	if ( aux[LEVELMODE] ) {
         // attitude calculations for level mode
  		extern void imu_calc(void);
 		imu_calc();
+	}
 
 // battery low logic
 

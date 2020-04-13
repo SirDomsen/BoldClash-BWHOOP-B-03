@@ -54,7 +54,7 @@ else mag2 = 0.707f;
 stickvector[0] *=mag2;
 stickvector[1] *=mag2;
 
-#ifdef INVERTED_ENABLE
+#ifdef LEVEL_MODE_INVERTED_ENABLE
 extern int pwmdir;
 
 if ( pwmdir==REVERSE )
@@ -81,7 +81,7 @@ limitf( &errorvect[1] , 1.0);
 // the vector cross product results in zero for opposite vectors, so it's bad at 180 error
 // without this the quad will not invert if angle difference = 180
 
-#ifdef INVERTED_ENABLE
+#ifdef LEVEL_MODE_INVERTED_ENABLE
 
 static int flip_active_once = 0;
 static int flipaxis = 0;
