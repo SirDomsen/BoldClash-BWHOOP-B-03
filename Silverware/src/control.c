@@ -700,7 +700,6 @@ if ( underthrottle < -0.01f) ledcommand = 1;
 
 
  #ifdef MIX_SCALING
-	#define TRANSIENT_MIX_INCREASING_HZ 2.0
 	#ifdef TRANSIENT_MIX_INCREASING_HZ
 		float maxSpeedRxcopy = 0.0f;
 		static float lastRxcopy[ 4 ];
@@ -766,8 +765,8 @@ mixmax = 0;
 
 		#if defined(MOTORS_TO_THROTTLE) || defined(MOTORS_TO_THROTTLE_MODE)
 		extern int idle_offset;
-		#if defined(MOTORS_TO_THROTTLE_MODE) && !defined(MOTORS_TO_THROTTLE)
 		static int orig_idle_offset = 0;
+		#if defined(MOTORS_TO_THROTTLE_MODE) && !defined(MOTORS_TO_THROTTLE)
 		if ( orig_idle_offset == 0 ) {
 			orig_idle_offset = idle_offset;
 		}

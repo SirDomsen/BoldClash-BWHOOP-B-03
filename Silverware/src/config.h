@@ -187,10 +187,12 @@
 //#define MIX_LOWER_THROTTLE_3
 //#define MIX_INCREASE_THROTTLE_3
 
-// Betaflight like mix scaling
+// Betaflight like mix scaling (aka Airmode)
 #define MIX_SCALING
 // Mix increasing yields a more crisp response but also a more jumpy quad at low RPM
 #define ALLOW_MIX_INCREASING
+// A higher value means a shorter active increasing period (shorter bouncy period)
+#define TRANSIENT_MIX_INCREASING_HZ 2.0
 // Can be used to limit maximum motor RPM, i.e. tone down a too fast quad.
 #define MIX_RANGE_LIMIT aux[ DEVO_CHAN_11 ] ? 0.75f : 1.0f
 

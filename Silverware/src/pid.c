@@ -114,8 +114,7 @@ extern float gyro[3];
 extern float gyro_unfiltered[3];
 extern int onground;
 extern float looptime;
-// extern float vbattfilt;
-extern float vbatt_comp;
+extern float vbattfilt;
 extern float battery_scale_factor;
 extern float rxcopy[];
 extern float aux_analog[];
@@ -393,8 +392,7 @@ void pid_precalc()
 	timefactor = 0.0032f / looptime;
 
 #ifdef PID_VOLTAGE_COMPENSATION
-    // v_compensation = mapf ( vbattfilt , 3.00 , 4.00 , PID_VC_FACTOR , 1.00);
-    v_compensation = mapf ( vbatt_comp , 3.00 , 4.00 , PID_VC_FACTOR , 1.00);
+    v_compensation = mapf ( vbattfilt , 3.00 , 4.00 , PID_VC_FACTOR , 1.00);
     if( v_compensation > PID_VC_FACTOR) v_compensation = PID_VC_FACTOR;
     if( v_compensation < 1.00f) v_compensation = 1.00;
 #endif
